@@ -291,11 +291,14 @@ make_brush( "_losfix_highway_bus2",		"-1 -54 -8",	"1 54 8",	"6951 7806 -645" );
 make_brush( "_losfix_motel_balcony1",	"-1 -282 -2",	"0 282 2",	"2959 3416 -806" );
 make_brush( "_losfix_motel_balcony2",	"-81 0 -2",	"81 1 2",	"2865 3129 -806" );
 make_brush( "_losfix_motel_fence",		"0 -128 -6",	"1 128 6",	"3058 4818 -972" );
+make_brush( "_losfix_motel_jeep",		"-80 -1 0",	"80 0 28",	"1784 4722 -975" );
 make_brush( "_losfix_motel_van",	"-64 -1 -10",	"64 1 10",	"1545 4113 -966" );
 make_brush( "_losfix_overpass_truck",	"-1 -32 -12",	"1 32 12",	"3571 7076 -693" );
 make_brush( "_losfix_start_bus",		"-215 -1 -18",	"250 1 24",	"9213 7957 -514" );
 make_brush( "_losfix_start_van",	"-100 -1 -15",	"100 1 15",	"7957 7769 -581" );
 make_brush( "_losfix_underpass_truck",	"-1 -110 -15",	"1 20 15",	"3471 7845 -994" );
+make_brush( "_losfix_underpass_van1",	"-30 -1 -4",	"80 0 30",	"3194 7573 -1004" );
+make_brush( "_losfix_underpass_van2",	"-1 -72 -4",	"0 30 24",	"3165 7542 -1004" );
 make_brush( "_losfix_van_jump",		"-1 -40 -12",	"1 44 20",	"6981.6 7662.8 -656.3" );
 make_clip( "_ladder_motelfrontleft_clipleft", "Everyone", 1, "-8 -25 0", "0 0 308", "2766 3708 -968", "0 129 0" );
 make_clip( "_ladder_motelfrontleft_clipright", "Everyone", 1, "0 0 0", "8 25 308", "2753 3724 -968", "0 -129 0" );
@@ -304,6 +307,7 @@ make_clip( "_ladder_motelfrontright_clipright", "Everyone", 1, "0 0 0", "8 25 30
 make_clip( "_motelskyboxroof_clipinfected", "SI Players", 1, "-2192 -592 0", "4 -340 394", "2972 3724 -649" );
 make_clip( "_saferoof_trollblock", "Survivors", 1, "-72 -282 0", "120 166 684", "-904 -2534 -940" );
 make_clip( "_whispsign_infectedqol", "SI Players", 1, "-56 -3.5 -2", "64 3 2", "9526 8374 -169" );
+make_clip( "_hrbillboard_infectedqol", "SI Players", 1, "-52 -3.5 -2", "58 3 2", "2334 6266 -501" );
 make_ladder( "_ladder_barrelsemi_cloned_caralarmshort", "1378 4328 -888", "2761 11131 269", "0 -120.6 0", "-0.52 -0.85 0" );
 make_ladder( "_ladder_endbusback_cloned_caralarmshort", "1378 4328 -888", "1026 1349 -147", "0 159 0", "-0.92 0.37 0" );
 make_ladder( "_ladder_endbusfront_cloned_caralarmshort", "1378 4328 -888", "-4553 -5663 -147", "0 -21.65 0", "0.92 -0.37 0" );
@@ -470,6 +474,10 @@ make_prop( "physics", "_hittable_2009forklift", "models/props/cs_assault/forklif
 make_trigduck( "_duckqol_carouselroof", "-30 1 0", "30 3 1", "-2240 -5259 303" );
 patch_nav_checkpoint( "1737 2712 4" );
 patch_nav_checkpoint( "-4337 -5511 -64" );
+
+// Manually fix the 2009 forklift since it is spawned after anv_mapfixes runs
+NetProps.SetPropInt( Entities.FindByName( null, g_UpdateName + "_hittable_2009forklift" ), "m_iMinHealthDmg", 400 );
+NetProps.SetPropInt( Entities.FindByName( null, g_UpdateName + "_hittable_2009forklift" ), "m_takedamage", 3 );
 
 		break;
 	}
@@ -896,6 +904,7 @@ make_clip( "_ladder_dumpsterhouse_clip", "Everyone", 1, "-8 -16 0", "26 8 168", 
 make_clip( "_ladder_safehousetall_clip", "SI Players", 1, "-20 -2 -2", "8 2 310", "3725 -1537 101", "0 45 0" );
 make_clip( "_ladder_sweetrelief_clip", "Everyone", 1, "-8 -16 0", "8 9 212", "-5746 6595 96", "0 53 0" );
 make_clip( "_ladder_yellowhousetree_topdenial", "SI Players", 1, "-8 -32 0", "8 32 62", "2244 3123 378", "-7 0 0" );
+make_clip( "_playgroundhouse_clip", "Survivors", 1, "-54 -177 -35", "635 176 1176", "-2074 7312 360" );
 make_clip( "_safehousehedge_blocker", "SI Players", 1, "-690 -122 -20", "139 93 2122", "4401 -2207 438" );
 make_ladder( "_ladder_autosalvagefront_cloned_playgroundroof", "-2041.58 7141.5 215.154", "-4077 930 8" );
 make_ladder( "_ladder_classyjimboblue_cloned_garagesalehouse", "2468 2634 184", "-6814 4053 0" );
@@ -1033,6 +1042,7 @@ make_brush( "_losfix_truck_jump",	"-70 -1 -10",	"70 1 10",	"2949 2885 108" );
 make_clip( "_ladder_dumpsterhouse_clip", "Everyone", 1, "-8 -16 0", "26 8 168", "1638 4032 217", "0 45 0" );
 make_clip( "_ladder_yellowhousetree_topdenial", "SI Players", 1, "-8 -32 0", "8 32 62", "2244 3123 378", "-7 0 0" );
 make_clip( "_ladder_safehousetall_clip", "SI Players", 1, "-20 -2 -2", "8 2 310", "3725 -1537 101", "0 45 0" );
+make_clip( "_playgroundhouse_clip", "Survivors", 1, "-54 -177 -35", "635 176 1176", "-2074 7312 360" );
 make_clip( "_safehousehedge_blocker", "SI Players", 1, "-690 -122 -20", "139 93 2122", "4401 -2207 438" );
 make_ladder( "_ladder_cornerhomeplants_cloned_garagesalehome", "2468 2634 184", "3773 4652 128", "0 90 0", "-1 0 0" );
 make_ladder( "_ladder_cornerhometankfight_cloned_treehousefence", "2058.5 2999.08 151.11", "1958 155 0" );
@@ -1177,6 +1187,7 @@ make_ladder( "_ladder_overpasslow_cloned_watchtowerbags", "-8000 -5874 -128", "-
 make_ladder( "_ladder_restroomsplatforml_cloned_startcopcarfence", "-3128 -2204 -304", "-7101 529 80", "0 90 0", "0 -1 0" );
 make_ladder( "_ladder_restroomsplatformr_cloned_startleftfence", "-3460 -1310 -304", "-8356 -3127 80", "0 180 0", "0 1 0" );
 make_ladder( "_ladder_startorangedrain_cloned_whitedumpster", "-9162 -4093 -68", "5959 2634 -103" );
+make_ladder( "_ladder_startstuckspot_cloned_archleft", "-8110 -2848 -200", "3444.1 1312 64" );
 make_ladder( "_ladder_telephonepoleB_cloned_restrictedbarricade", "-9544 -5266 -128", "-11800 3720 -16", "0 90 0", "-1 0 0" );
 make_ladder( "_ladder_telephonepoleT_cloned_restrictedbarricade", "-9544 -5266 -128", "-11800 3720 176", "0 90 0", "-1 0 0" );
 make_prop( "dynamic",		"_losblocker_fence",		"models/props_urban/fence_cover001_256.mdl",	"-6583 -5743 -247.75",		"0 180 0",		"shadow_no" );
@@ -1194,6 +1205,7 @@ make_prop( "dynamic", "_solidify_flatawningend1", "models/props_street/awning_sh
 make_prop( "dynamic", "_solidify_flatawningend2", "models/props_street/awning_short.mdl", "-8537 -8320 -108.921", "0 0 0", "shadow_no" );
 make_prop( "dynamic", "_solidify_flatawningmid", "models/props_street/awning_short.mdl", "-9216 -3712 -78.4492", "0 270 0", "shadow_no" );
 make_prop( "dynamic", "_yesdraw_billboard_nodraw", "models/props_update/c5m2_billboard_nodraw.mdl", "-9152 -6938 92", "0 -90 0", "shadow_no", "solid_no" );
+make_prop( "physics", "_hittable_dumpster",	"models/props_junk/dumpster_2.mdl",	"-8095 -600 -246", "0 0 0", "shadow_no" );
 patch_ladder( "-9260 -5130 -152", "0 14 0" );
 
 		break;
@@ -1258,6 +1270,8 @@ make_ladder( "_ladder_holefenceback_cloned_firstcrypt", "7022 -4849 197.016", "1
 make_ladder( "_ladder_holefencefront_cloned_firstcrypt", "7022 -4849 197.016", "-2697 -3866 -124", "0 75 0", "-0.96 0.26 0" );
 make_ladder( "_ladder_manholechaintran_cloned_manholeblue", "4374 1576 76.1509", "-5 -1940 -9" );
 make_ladder( "_ladder_onewayshedback_cloned_firstcrypt", "7022 -4849 197.016", "-2 825 -10" );
+make_ladder( "_ladder_onewaybackfence_cloned_middlecrypt", "7604.02 -5653.63 184", "-1657.1 1144 -16" );
+make_ladder( "_ladder_onewayleftfence_cloned_firstcrypt", "7022 -4849 197.016", "-560 985 -20" );
 make_ladder( "_ladder_overpassfence_cloned_flamingofence", "4830 3840 57", "2793 2190 1399", "17 -90 0", "0 1 0" );
 make_ladder( "_ladder_overpassjumpqol_cloned_startfence", "5940 8462 89.6381", "-2301 14862 210", "0 -90 0", "-1 0 0" );
 make_ladder( "_ladder_pinkhouseB_cloned_manholeblownwall", "3778 656 100", "69 3452 -12" );
@@ -1286,9 +1300,6 @@ make_prop( "dynamic",		"_propladder_fencea",		"models/props_fortifications/barri
 make_prop( "dynamic",		"_propladder_fenceb",		"models/props_fortifications/barricade_gate001_64_reference.mdl",	"3121 6347 26.916",		"-45 89.466 0.0493",	"shadow_no" );
 make_prop( "dynamic",		"_propladder_fencec",		"models/props_fortifications/barricade_gate001_64_reference.mdl",	"4026.17 -194.24 -0.284",	"-45 269.466 0.0493",	"shadow_no" );
 make_prop( "dynamic",		"_propladder_fenced",		"models/props_fortifications/barricade_gate001_64_reference.mdl",	"4074.17 -194.24 -0.284",	"-45 269.466 0.0493",	"shadow_no" );
-make_prop( "dynamic",		"_propladder_oildruma",		"models/props_urban/oil_drum001.mdl",		"6828 -3836 108.162",		"0 0 0" );
-make_prop( "dynamic",		"_propladder_oildrumb",		"models/props_urban/oil_drum001.mdl",		"6789 -3845 108.162",		"0 285 0" );
-make_prop( "dynamic",		"_propladder_oildrumc",		"models/props_urban/oil_drum001.mdl",		"6805.38 -3841.81 156.607",	"0 285 0" );
 make_prop( "dynamic", "_collosaldumpster_wrongwaya", "models/props_misc/wrongway_sign01_optimized.mdl", "3471 2320 320", "0 180 0", "shadow_no", "solid_no", "255 255 255", "17", "217" );
 make_prop( "dynamic", "_collosaldumpster_wrongwayb", "models/props_misc/wrongway_sign01_optimized.mdl", "3471 2140 320", "0 180 0", "shadow_no", "solid_no", "255 255 255", "17", "217" );
 make_prop( "dynamic", "_solidify_tankconcretewall_chimney", "models/props_urban/chimney007.mdl", "3500.87 5616.91 353.166", "0 180 0", "shadow_no" );
@@ -1601,6 +1612,7 @@ make_brush( "_losfix_truck",	"-1 -80 -5",	"1 80 15",	"2232 4268 12" );
 make_brush( "_losfix_van1",		"-1 -50 -8",	"1 50 8",	"2588 3542 21" );
 make_brush( "_losfix_van2",		"-40 -1 -8",	"41 1 8",	"2546 3494 21" );
 make_clip( "_ladder_startroof_clip", "SI Players", 1, "4 -28 0", "8 28 3", "2292 1340 319" );
+make_clip( "_ladder_subwaybricks_clip", "Everyone", 1, "-1 -8 0", "2 8 128", "2814 4104 16" );
 make_clip( "_meticulous_funcinfclip01", "SI Players", 1, "-1 -28 0", "3 28 74", "2293 850 322" );
 make_clip( "_meticulous_funcinfclip02", "SI Players", 1, "-8 -619 0", "185 629 1089", "3175 3371 832" );
 make_clip( "_meticulous_funcinfclip03", "SI Players", 1, "-153 -812 0", "293 308 4132", "153 2988 352" );
@@ -2056,8 +2068,9 @@ kill_funcinfclip( 698.195 );		// Delete clip directly above bridge tunnel entran
 kill_funcinfclip( 1086.93 );		// Delete clip on tunnel entrance side of the hill
 kill_funcinfclip( 1105.65 );		// Delete clip on overpass side of the hill
 make_brush( "_losfix_semi",		"-50 -1 -15",	"50 1 15",	"-12260 -11102 -49" );
-make_brush( "_losfix_van1",		"-48 -1 -8",	"48 1 8",	"-12318 -8360 -56" );
-make_brush( "_losfix_van2",		"-1 -45 -8",	"1 45 8",	"-12990 -6644 -56" );
+make_brush( "_losfix_earlyvan",		"-48 -1 -8",	"48 1 8",	"-12318 -8360 -56" );
+make_brush( "_losfix_latevan1",		"-1 -45 -8",	"0 45 18",	"-12951 -6686 -56" );
+make_brush( "_losfix_latevan2",		"-45 -1 -8",	"45 0 18",	"-12997 -6640 -56" );
 make_clip( "_ladder_bridgetunnel_backboard", "Everyone", 1, "-248 -10 -84", "308 6 48", "-12348 -9814 272" );
 make_clip( "_ladder_bridgetunnel_clip", "Everyone", 1, "-8 -8 0", "22 3 74", "-12617 -9856 -50", "0 21 0" );
 make_clip( "_meticulous_funcinfclip01", "SI Players", 1, "-415 -16 0", "401 45 782", "-12353 -9664 496" );
@@ -2169,7 +2182,7 @@ make_prop( "dynamic",		"_solidify_tree05",		"models/props_foliage/trees_cluster0
 make_prop( "dynamic",		"_solidify_tree06",		"models/props_foliage/trees_cluster01.mdl",	"-9678.08 -1120 11.46",		"-15.8186 151.677 -1.38363",	"shadow_no" );
 make_prop( "dynamic",		"_solidify_tree07",		"models/props_foliage/trees_cluster01.mdl",	"-8914.98 -852.481 -26.4875",		"0 317 0",	"shadow_no" );
 make_prop( "dynamic",		"_solidify_tree08",		"models/props_foliage/trees_cluster01.mdl",	"-8568 -984 -52", "1.17358 181.777 -6.60183",	"shadow_no" );
-make_prop( "dynamic",		"_solidify_tree09",		"models/props_foliage/trees_cluster02.mdl",	"-7168 -880 -91.8731", "-6.18811 26.8478 12.0217",	"shadow_no" );
+//make_prop( "dynamic",		"_solidify_tree09",		"models/props_foliage/trees_cluster02.mdl",	"-7168 -880 -91.8731", "-6.18811 26.8478 12.0217",	"shadow_no" );
 make_prop( "dynamic",		"_solidify_tree10",		"models/props_foliage/trees_cluster02.mdl",	"-9664 -1400 -36.5395", "-15.8186 151.677 -1.38363",	"shadow_no" );
 
 		break;
@@ -2208,8 +2221,8 @@ make_brush( "_losfix_van1",		"-100 -1 -9",	"100 1 9",	"-3340 -1677 -47" );
 make_brush( "_losfix_van2",		"-70 -1 -8",	"70 1 8",	"-762 -2268 -48" );
 make_clip( "_fineantique_surf_collision", "SI Players", 1, "-320 -240 -56", "320 240 0", "1968 -4608 320" );
 make_clip( "_hellcade_clipa", "SI Players", 1, "-240 -8 0", "240 17 1792", "-5360 -504 -64" );
-make_clip( "_hellcade_clipb", "SI Players", 1, "-17 -830 0", "8 507 1792", "-5605 -1001 -64" );
-make_clip( "_hellcade_clipc", "SI Players", 1, "-240 -8 0", "304 17 1792", "-5360 -1857 -64" );
+make_clip( "_hellcade_clipb", "SI Players", 1, "-17 -840 0", "8 507 1792", "-5605 -1001 -64" );
+make_clip( "_hellcade_clipc", "SI Players", 1, "-240 -8 0", "275 17 1792", "-5360 -1857 -64" );
 make_clip( "_hellcade_permstuck", "SI Players", 1, "-8 -216 0", "8 216 17", "-5115 -1028 -49" );
 make_clip( "_ladder_eventskybridge_clip", "SI Players", 1, "-11 -23 0", "2 46 8", "-1314 -4766 296" );
 make_clip( "_ladder_starthilltop_clip", "SI Players", 1, "-16 -8 0", "16 8 2", "-4608 -1906 520", "0 -17.7 0" );
@@ -2412,6 +2425,8 @@ make_prop( "dynamic", "_yesdraw_longjump_wrongwaya", "models/props_misc/wrongway
 make_prop( "dynamic", "_yesdraw_longjump_wrongwayb", "models/props_misc/wrongway_sign01_optimized.mdl", "2805 3065 918", "0 -90 0", "shadow_no", "solid_no", "255 255 255", 500, 17 );
 make_prop( "dynamic", "_yesdrawgreenhouse_panels", "models/props_update/c11m1_greenhouse_nodraw.mdl", "6118.9 -632 943", "0 270 0", "shadow_no" );
 make_prop( "dynamic", "_yesdrawgreenhouse_plywood", "models/props_update/c11m1_greenhouse_plywood.mdl", "5524 -717 968", "0 270 0", "shadow_no" );
+make_prop( "dynamic", "_yesdrawgreenhouse_wrongwaya", "models/props_misc/wrongway_sign01_optimized.mdl", "6305 -633 1148", "0 180 0", "shadow_no", "solid_no", "255 255 255", 500, 17 );
+make_prop( "dynamic", "_yesdrawgreenhouse_wrongwayb", "models/props_misc/wrongway_sign01_optimized.mdl", "6305 -395 1148", "0 180 0", "shadow_no", "solid_no", "255 255 255", 500, 17 );
 local strEndUpperWalkway = clone_model( Entities.FindByClassnameNearest( "func_illusionary", Vector( 4063, 2331, 49.83 ), 1 ) );
 
 if ( strEndUpperWalkway != null )
