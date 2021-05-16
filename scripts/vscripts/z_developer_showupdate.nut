@@ -45,20 +45,18 @@
 /* New changes/additions:
 **	- TODO:
 **		-> Update above comment block with any changes, update tutorial messages
-**		-> Make list of entities to ignore we will never highlight or be able to see at the start of the "while( ( entity = Entities.Next( entity ) ) != null )"
-**			-> loop in ShowUpdate() to reduce delay between calling and drawing, and avoid indexing pointless entities
 **		-> Prevent all/other from highlighting props that are part of the map/add more options to SetFilter() for props
-**		-> Combine both for loops in DebugRedraw and check DebugDrawClear is working as fully intended when outside the for loop
+**		-> Combine both for loops in DebugRedraw
 **			-> Determine results of g_arrayFixHandles.len() and g_arrayFixHandles[index].IsValid()
-**		-> Optional range and view angle cut off for rendering debug draw boxes and text
-**			-> Avoid rendering anything that is not in our field of view, however could be more expensive to calculate this than to actually render
+**		-> Optional range cut off for rendering debug draw boxes and text
 **		-> Check if prop is glowing/not glowing in prop redraw loop to prevent unneccessary EntFire calls
-**		-> Ensure any cases where glows or highlights remain when they shouldn't be are fixed, e.g. team switch, round/map change
+**		-> Ensure any cases where glows or highlights persist when they shouldn't are fixed, e.g. team switch, round/map change
 **		-> Option to show model number for all ladders, cloned and non-cloned
 **		-> Highlight/glow additional entities in some way - Might be possible to fire a glow input on them
 **			-> func_clip_vphysics
 **			-> func_playerinfected_clip, func_playerghostinfected_clip
 **		-> Fix/confirm redraws being generated infinitely on custom maps
+**		-> Optimize fire time for DebugRedraw()
 **	- Various minor optimizations
 **		-> Reduced repeated function calls
 **		-> Optimized order of execution and removed some statements from loops that only needed to be called or checked once
@@ -82,6 +80,10 @@
 **	- Allowed commentary blockers, lump blockers, and any blockers added by mods etc to be highlighted with the full functionality that anv_mapfixes blockers are given
 **	- Invalid or deleted entities are removed from the drawing index before attempting to draw them
 **	- Adjusted func_brush color to help distinguish it from infected clips better
+**	- Text will stop being rendered if it is off-screen for 10 seconds
+**	- Made ShowUpdate() instantly call DebugRedraw(), instead of waiting 1 second for worldspawn to fire the script
+**	- ShowUpdate() now skips over all entity types that won't be highlighted
+**	- Number of entities indexed is printed to console
 */
 
 // Call to cease and desist DebugRedraw(). Technically fires "StopGlowing" to all blockers,
@@ -109,8 +111,11 @@ function HideUpdate()
 		}
 	
 		// Clean up global arrays.
+		
 		g_arrayFixHandles.clear();
 		g_arrayLadderSources.clear();
+		g_arrayFixHandles <- array( 1, null );
+		g_arrayLadderSources <- array( 1, null);
 	}
 	
 }
@@ -187,6 +192,29 @@ function ShowUpdate( showGroup = "anv" )
 		local strEntityName = entity.GetName();
 		local strClassname = entity.GetClassname();
 		
+		// Skip entities that we don't care about.
+		
+		if ( ! ( strClassname == "env_physics_blocker"
+			  || strClassname == "env_player_blocker"
+			  || strClassname == "func_brush"
+			  || strClassname == "func_nav_blocker"
+			  || strClassname == "trigger_multiple"
+			  || strClassname == "trigger_once"
+			  || strClassname == "trigger_push"
+			  || strClassname == "trigger_hurt"
+			  || strClassname == "trigger_hurt_ghost"
+			  || strClassname == "trigger_auto_crouch"
+			  || strClassname == "trigger_playermovement"
+			  || strClassname == "trigger_teleport"
+			  || strClassname == "func_simpleladder"
+			  || strClassname == "prop_dynamic"
+			  || strClassname == "prop_dynamic_override"
+			  || strClassname == "prop_physics"
+			  || strClassname == "prop_physics_override" ) )
+		{
+			continue;
+		}
+		
 		// Reset glows on all models.
 		
 		if ( strClassname == "prop_dynamic"
@@ -228,6 +256,8 @@ function ShowUpdate( showGroup = "anv" )
 			g_arrayFixHandles.resize( index + 1 , null );
 		}
 	}
+	
+	printl( "\nIndexed "+ index + " entities!\n" );
 
 	// Timer that DebugRedraw()'s every 1 second, better than AddThinkToEnt() because it
 	// runs 1/10th as often and still looks good. Only make if one doesn't already exist.
@@ -247,6 +277,8 @@ function ShowUpdate( showGroup = "anv" )
 			}
 		} );
 	}
+	
+	DebugRedraw()
 }
 
 // Declare function that houses the redraw loop the above Timer runs every 1 second.
@@ -276,7 +308,7 @@ function DebugRedraw()
 	
 	g_arrayLadderSources.clear()
 	
-	// Only clear for 1st redrawn entity. If absent, only last-most blocker is drawn.
+	// Clear debug overlay info before starting a new redraw.
 	// Props don't need to be "redrawn" since the one "StartGlowing" is sufficient.
 	
 	DebugDrawClear();
@@ -319,16 +351,16 @@ function DebugRedraw()
 					break;
 			}
 			
-			if ( g_SetFilterClipBlock != -1 )
+			if ( g_SetFilterBlockType != -1 )
 			{
-				if ( g_SetFilterClipBlock != intBlockType ) continue;
+				if ( g_SetFilterBlockType != intBlockType ) continue;
 			}
-			
-			// Color debug box by BlockType.
 			
 			local vecMins = NetProps.GetPropVector( hndFixHandle, "m_Collision.m_vecMins" );
 			local vecMaxs = NetProps.GetPropVector( hndFixHandle, "m_Collision.m_vecMaxs" );
 			local vecBoxColor = null;
+			
+			// Color debug box by BlockType.
 
 			switch( intBlockType )
 			{
@@ -495,14 +527,7 @@ function DebugRedraw()
 			
 			local modelName = hndFixHandle.GetModelName();
 			
-			// Build list of used ladder sources to avoid duplicating text.
-			
-			if ( g_arrayLadderSources.find(modelName) == null )
-			{
-				DebugDrawText( vecMins, "LADDER CLONE SOURCE (" + modelName + ")", false, 99999999 );
-				g_arrayLadderSources.resize( g_arrayLadderSources.len() + 1 , null );
-				g_arrayLadderSources.append( modelName );
-			}
+			DebugRedrawCloneSource(vecMins, modelName)
 			
 			// Draw moved non-update-named ladders in purple.
 			
@@ -540,60 +565,9 @@ function DebugRedraw()
 					    vecAngles, vecBoxColor,
 					    g_BoxOpacity + 24, 99999999 );
 
-			// Calculate correct position to display text at, otherwise labels for rotated ladders will be displaced.
-			
-			// Position of ladder mins and maxs to transform.
-			
-			local vectorX = ( vecMins.x + vecMaxs.x ) / 2;
-			local vectorY = ( vecMins.y + vecMaxs.y ) / 2;
-			local vectorZ = ( vecMins.z + vecMaxs.z ) / 2;
-			
-			// Angle ladder is rotated by, in radians.
-			
-			local angleX = ( vecAngles.z * PI ) / 180;
-			local angleY = ( vecAngles.x * PI ) / 180;
-			local angleZ = ( vecAngles.y * PI ) / 180;
-			
-			// Store trig calculations.
-			
-			local cosX = cos( angleX );
-			local cosY = cos( angleY );
-			local cosZ = cos( angleZ );
-			local sinX = sin( angleX );
-			local sinY = sin( angleY );
-			local sinZ = sin( angleZ );
-			
-			// Mid-calculation variables.
-			
-			local transformedX = 0;
-			local transformedY = 0;
-			local transformedZ = 0;
-			
-			// 3D rotation matrix.
-			
-			transformedY = ( cosX * vectorY ) - ( sinX * vectorZ );
-			transformedZ = ( cosX * vectorZ ) + ( sinX * vectorY );
-			vectorY = transformedY;
-			vectorZ = transformedZ;
-			
-			transformedX = ( cosY * vectorX ) + ( sinY * vectorZ );
-			transformedZ = ( cosY * vectorZ ) - ( sinY * vectorX );
-			vectorX = transformedX;
-			vectorZ = transformedZ;
-			
-			transformedX = ( cosZ * vectorX ) - ( sinZ * vectorY );
-			transformedY = ( cosZ * vectorY ) + ( sinZ * vectorX );
-			vectorX = transformedX;
-			vectorY = transformedY;
-			
-			// Final result is the offset of the ladder from the world's origin (0,0,0), but corrected for rotation.
-			// GetOrigin gives us the offset of the ladder from its cloned model.
-			// Adding them together produces the actual position of the ladder in the world.
-			// Vector( vectorX, vectorY, vectorZ );
-			
 			// Draw text to identify entity.
 			
-			DebugRedrawName( vecOrigin + Vector( vectorX, vectorY, vectorZ ), strTargetname, "LADDER", index);
+			DebugRedrawName( vecOrigin + MathLadderOrigin(vecMins, vecMaxs, vecAngles), strTargetname, "LADDER", index);
 		}
 
 		// Keyvalues from make_prop() don't need restoration as attributes can be visually assessed.
@@ -634,6 +608,20 @@ function DebugRedraw()
 
 function DebugRedrawName(origin, name, entityType, index)
 {
+	
+	// See SetFilter function for values.
+	
+	local UseViewCheck = false;
+	
+	if ( g_SetFilterText == 0 )
+	{
+		return;
+	}
+	else if ( g_SetFilterText == 2 )
+	{
+		UseViewCheck = true;
+	}
+	
 	local namePrefix = entityType + ": ";
 	local additionalPrefix = "";
 	
@@ -669,21 +657,106 @@ function DebugRedrawName(origin, name, entityType, index)
 		name = name.slice( g_UpdateName.len(), name.len() );	// g_UpdateName string was found, remove it.
 	}
 	
-	DebugDrawText( origin, namePrefix + name + " (" + index + ")", false, 99999999 );
+	DebugDrawText( origin, namePrefix + name + " (" + index + ")", UseViewCheck, 10 );
+}
+
+// Function to handle the drawing of text on cloned ladder models.
+
+function DebugRedrawCloneSource(origin, modelName)
+{
+
+	// See SetFilter function for values.
+	
+	local UseViewCheck = false;
+	
+	if ( g_SetFilterText == 0 )
+	{
+		return;
+	}
+	else if ( g_SetFilterText == 2 )
+	{
+		UseViewCheck = true;
+	}
+	
+	// Build list of used ladder sources to avoid duplicating text.
+	
+	if ( g_arrayLadderSources.find( modelName ) == null )
+	{
+		DebugDrawText( origin, "LADDER CLONE SOURCE (" + modelName + ")", UseViewCheck, 10 );
+		g_arrayLadderSources.resize( g_arrayLadderSources.len() + 1 , null );
+		g_arrayLadderSources.append( modelName );
+	}
+}
+
+// Calculate correct position to display text at with MathLadderOrigin, otherwise labels for rotated ladders will be displaced.
+
+function MathLadderOrigin(vecMins, vecMaxs, vecAngles)
+{
+
+	// Position of ladder mins and maxs to transform.
+	
+	local vectorX = ( vecMins.x + vecMaxs.x ) / 2;
+	local vectorY = ( vecMins.y + vecMaxs.y ) / 2;
+	local vectorZ = ( vecMins.z + vecMaxs.z ) / 2;
+
+	// Angle ladder is rotated by, in radians.
+
+	local angleX = ( vecAngles.z * PI ) / 180;
+	local angleY = ( vecAngles.x * PI ) / 180;
+	local angleZ = ( vecAngles.y * PI ) / 180;
+
+	// Store trig calculations.
+
+	local cosX = cos( angleX );
+	local cosY = cos( angleY );
+	local cosZ = cos( angleZ );
+	local sinX = sin( angleX );
+	local sinY = sin( angleY );
+	local sinZ = sin( angleZ );
+
+	// Mid-calculation variables.
+
+	local transformedX = 0;
+	local transformedY = 0;
+	local transformedZ = 0;
+
+	// 3D rotation matrix.
+
+	transformedY = ( cosX * vectorY ) - ( sinX * vectorZ );
+	transformedZ = ( cosX * vectorZ ) + ( sinX * vectorY );
+	vectorY = transformedY;
+	vectorZ = transformedZ;
+
+	transformedX = ( cosY * vectorX ) + ( sinY * vectorZ );
+	transformedZ = ( cosY * vectorZ ) - ( sinY * vectorX );
+	vectorX = transformedX;
+	vectorZ = transformedZ;
+
+	transformedX = ( cosZ * vectorX ) - ( sinZ * vectorY );
+	transformedY = ( cosZ * vectorY ) + ( sinZ * vectorX );
+	vectorX = transformedX;
+	vectorY = transformedY;
+
+	// Final result is the offset of the ladder from the world's origin (0,0,0), but corrected for rotation.
+	// GetOrigin gives us the offset of the ladder from its cloned model.
+	// Adding them together produces the actual position of the ladder in the world.
+	
+	return Vector( vectorX, vectorY, vectorZ );
 }
 
 // Function to change settings for groups of entities to be highlighted.
-// Entering "all" for the value argument will default to 1, except for clipblock where it defaults to -1 (no filter).
+// Entering "all" for the value argument will default to 1, except for blocktype where it defaults to -1 (no filter).
 
 // Initialize SetFilter settings.
 
 g_SetFilterClip <- 1;
-g_SetFilterClipBlock <- -1;
+g_SetFilterBlockType <- -1;
 g_SetFilterBrush <- 1;
 g_SetFilterNav <- 1;
 g_SetFilterTrigger <- 1;
 g_SetFilterLadder <- 1;
 g_SetFilterProp <- 1;
+g_SetFilterText <- 1;
 
 /*
 ** Entity Filters:
@@ -693,7 +766,7 @@ g_SetFilterProp <- 1;
 ** clip
 ** 		- Entities:	env_physics_blocker, env_player_blocker
 **		- Values:	0 = Hide all clips, 1 = Show all clips (Default), 2 = Only env_physics_blocker, 3 = Only env_player_blocker
-** clipblock
+** blocktype
 **		- Entities:	env_physics_blocker, env_player_blocker - Filters by BlockType key value
 **		- Values:	all (-1) = All block types (Default), 0 = Everyone, 1 = Survivors, 2 = Player Infected,
 **					3 = All Special Infected (Player and AI), 4 = All players and physics objects (env_physics_blocker only)
@@ -713,6 +786,9 @@ g_SetFilterProp <- 1;
 ** prop
 ** 		- Entities:	prop_dynamic, prop_dynamic_override, prop_physics, prop_physics_override
 **		- Values:	0 = Hide all props, 1 = Shows all props (Default), 2 = Show dynamic props only, 3 = Show physics props only
+** text
+**		- Entities: Debug text
+**		- Values:	0 = Hides all text, 1 = Shows all text (Default), 2 = Shows text only if there is a direct line of sight
 */
 
 function SetFilter( entityGroup = null, value = null )
@@ -727,7 +803,7 @@ function SetFilter( entityGroup = null, value = null )
 	switch( value )
 	{
 		case null:
-			if ( entityGroup == "clipblock" )
+			if ( entityGroup == "blocktype" )
 			{
 				value = -1;
 			}
@@ -737,7 +813,7 @@ function SetFilter( entityGroup = null, value = null )
 			}
 			break;
 		case "all":
-			if ( entityGroup == "clipblock" )
+			if ( entityGroup == "blocktype" )
 			{
 				value = -1;
 			}
@@ -774,11 +850,11 @@ function SetFilter( entityGroup = null, value = null )
 			
 			if ( value == 1 )
 			{
-				g_SetFilterClipBlock <- -1;
+				g_SetFilterBlockType <- -1;
 			}
 			else
 			{
-				g_SetFilterClipBlock <- value;
+				g_SetFilterBlockType <- value;
 			}
 			
 			g_SetFilterClip <- value;
@@ -795,12 +871,12 @@ function SetFilter( entityGroup = null, value = null )
 			}
 			g_SetFilterClip <- value;
 			break;
-		case "clipblock":
+		case "blocktype":
 			if (value < -1 || value > 4)
 			{
 				value = -1;
 			}
-			g_SetFilterClipBlock <- value;
+			g_SetFilterBlockType <- value;
 			break;
 		case "brush":
 			if (value < 0 || value > 2)
@@ -836,6 +912,13 @@ function SetFilter( entityGroup = null, value = null )
 				value = 1;
 			}
 			g_SetFilterProp <- value;
+			break;
+		case "text":
+			if (value < 0 || value > 2)
+			{
+				value = 1;
+			}
+			g_SetFilterText <- value;
 			break;
 		default:
 			printl("\nEntity group: '" + entityGroup + "' is not valid, or no entity group was specified.\n");
