@@ -46,8 +46,6 @@
 **	- TODO:
 **		-> Update above comment block with any changes, update tutorial messages
 **		-> Prevent all/other from highlighting props that are part of the map/add more options to SetFilter() for props
-**		-> Combine both for loops in DebugRedraw
-**			-> Determine results of g_arrayFixHandles.len() and g_arrayFixHandles[index].IsValid()
 **		-> Optional range cut off for rendering debug draw boxes and text
 **		-> Check if prop is glowing/not glowing in prop redraw loop to prevent unneccessary EntFire calls
 **		-> Ensure any cases where glows or highlights persist when they shouldn't are fixed, e.g. team switch, round/map change
@@ -78,7 +76,8 @@
 **		-> Ladders that are not new and haven't been moved are highlighted in light orange
 **	- Added trigger_teleport to potential triggers to highlight
 **	- Allowed commentary blockers, lump blockers, and any blockers added by mods etc to be highlighted with the full functionality that anv_mapfixes blockers are given
-**	- Invalid or deleted entities are removed from the drawing index before attempting to draw them, which would prevent any entity after it from being drawn without re-applying ShowUpdate()
+**	- Invalid or deleted entities are removed from the drawing index before attempting to draw them
+**		-> This removes the need to toggle ShowUpdate()/HideUpdate() when an entity is deleted
 **	- Adjusted func_brush color to help distinguish it from infected clips better
 **	- Text will stop being rendered if it is off-screen for 10 seconds
 **	- Made ShowUpdate() instantly call DebugRedraw(), instead of waiting 1 second for worldspawn to fire the script
@@ -124,6 +123,22 @@ function HideUpdate()
 // Opacity override for DebugDrawBox's (default 37).
 
 g_BoxOpacity <- 37;
+
+// Define "constants" for colors used with DebugDrawBox.
+// Constants and enums cannot be vectors, so make do with variables.
+
+COLOR_CLIP_RED			<- Vector( 255,   0,   0 );
+COLOR_CLIP_PINK			<- Vector( 185,   0, 185 );
+COLOR_CLIP_GREEN		<- Vector(   0, 255,   0 );
+COLOR_CLIP_BLUE			<- Vector(   0,   0, 255 );
+COLOR_CLIP_LTBLUE		<- Vector(   0, 128, 255 );
+COLOR_CLIP_BLACK		<- Vector(   0,   0,   0 );
+COLOR_BRUSH_LTGREEN		<- Vector( 108, 200,  64 );
+COLOR_NAV_ORANGE		<- Vector( 255,  45,   0 );
+COLOR_TRIGGER_YELLOW	<- Vector( 255, 255,   0 );
+COLOR_LADDER_WHITE		<- Vector( 255, 255, 255 );
+COLOR_LADDER_PURPLE		<- Vector( 134,  60, 218 );
+COLOR_LADDER_ORANGE		<- Vector( 255, 128,  64 );
 
 // Only show CLIP (blocker) color coding tutorial once per load session.
 
@@ -290,27 +305,10 @@ function ShowUpdate( showGroup = "anv" )
 }
 
 // Declare function that houses the redraw loop the above Timer runs every 1 second.
-// The IsValid() avoids "Accessed null instance" error if an entity within Handle array
-// is deleted -- this will still break redraws, hence "TUTORIAL" to explain Hide/Show toggle.
 
 function DebugRedraw()
 {
 	local index = 0;
-	
-	// Remove invalid or deleted entities from array before drawing.
-	
-	for ( index = 0;
-	      g_arrayFixHandles[index] != null && index <= g_arrayFixHandles.len();
-	      index++ )
-	{
-		// Check if entity is valid.
-		
-		if ( ! g_arrayFixHandles[index].IsValid() )
-		{
-			g_arrayFixHandles.remove( index );	// Entity is not valid, remove from array.
-			printl( "Invalid entity '" + index + "' removed from drawing index." );
-		}
-	}
 	
 	// Clear ladder model sources array at the start of a redraw.
 	
@@ -324,9 +322,16 @@ function DebugRedraw()
 	// Draw all indexed entities.
 
 	for ( index = 0;
-	      g_arrayFixHandles[index] != null && g_arrayFixHandles[index].IsValid();
+	      g_arrayFixHandles[index] != null && index <= g_arrayFixHandles.len();
 	      index++ )
 	{
+		// Remove invalid or deleted entities from array before drawing.
+		
+		if ( ! g_arrayFixHandles[index].IsValid() )
+		{
+			g_arrayFixHandles.remove( index );	// Entity is not valid, remove from array and skip.
+			printl( "Invalid entity '" + index + "' removed from drawing index." );
+		}
 		
 		// Store entity handles and values.
 		
@@ -378,12 +383,12 @@ function DebugRedraw()
 
 				switch( intBlockType )
 				{
-					case 0:	vecBoxColor = Vector( 255,   0,   0 );	break;	// "Everyone" (RED)
-					case 1:	vecBoxColor = Vector( 185,   0, 185 );	break;	// "Survivors" (PINK)
-					case 2:	vecBoxColor = Vector(   0, 255,   0 );	break;	// "SI Players" (GREEN)
-					case 3:	vecBoxColor = Vector(   0,   0, 255 );	break;	// "SI Players and AI" (BLUE)
-					case 4:	vecBoxColor = Vector(   0, 128, 255 );	break;	// "All and Physics" (LT BLUE)
-					default: vecBoxColor = Vector(  0,   0,   0 );	break;	// Invalid block type (BLACK)
+					case 0:	vecBoxColor = COLOR_CLIP_RED;		break;	// "Everyone" (RED)
+					case 1:	vecBoxColor = COLOR_CLIP_PINK;		break;	// "Survivors" (PINK)
+					case 2:	vecBoxColor = COLOR_CLIP_GREEN;		break;	// "SI Players" (GREEN)
+					case 3:	vecBoxColor = COLOR_CLIP_BLUE;		break;	// "SI Players and AI" (BLUE)
+					case 4:	vecBoxColor = COLOR_CLIP_LTBLUE;	break;	// "All and Physics" (LT BLUE)
+					default: vecBoxColor = COLOR_CLIP_BLACK;	break;	// Invalid block type (BLACK)
 				}
 
 				// Note DebugDrawBoxDirection() with GetForwardVector() only supports Y (yaw).
@@ -438,7 +443,7 @@ function DebugRedraw()
 				
 				local vecMins = NetProps.GetPropVector( hndFixHandle, "m_Collision.m_vecMins" );
 				local vecMaxs = NetProps.GetPropVector( hndFixHandle, "m_Collision.m_vecMaxs" );
-				local vecBoxColor = Vector( 108, 200, 64 );	// LT GREEN
+				local vecBoxColor = COLOR_BRUSH_LTGREEN;	// LT GREEN
 
 				// Brush rotation unsupported so GetAngles() does nothing.
 
@@ -472,7 +477,7 @@ function DebugRedraw()
 
 				local vecMins = NetProps.GetPropVector( hndFixHandle, "m_Collision.m_vecMins" );
 				local vecMaxs = NetProps.GetPropVector( hndFixHandle, "m_Collision.m_vecMaxs" );
-				local vecBoxColor = Vector( 255, 45, 0 );	// ORANGE
+				local vecBoxColor = COLOR_NAV_ORANGE;	// ORANGE
 
 				// Rotation on navblockers is especially unsupported and always 0's.
 
@@ -513,7 +518,7 @@ function DebugRedraw()
 				
 				local vecMins = NetProps.GetPropVector( hndFixHandle, "m_Collision.m_vecMins" );
 				local vecMaxs = NetProps.GetPropVector( hndFixHandle, "m_Collision.m_vecMaxs" );
-				local vecBoxColor = Vector( 255, 255, 0 );	// YELLOW
+				local vecBoxColor = COLOR_TRIGGER_YELLOW;	// YELLOW
 
 				// Triggers are a wildcard but try to draw Angles just in case they're non-0.
 				// Note that "trigger_push" rotation has unknown mild influence on Push Direction
@@ -536,7 +541,7 @@ function DebugRedraw()
 			
 				local vecMins = NetProps.GetPropVector( hndFixHandle, "m_Collision.m_vecMins" );
 				local vecMaxs = NetProps.GetPropVector( hndFixHandle, "m_Collision.m_vecMaxs" );
-				local vecBoxColor = Vector( 255, 255, 255 );	// WHITE
+				local vecBoxColor = COLOR_LADDER_WHITE;	// WHITE
 				
 				// Draw text at the SOURCE ladder's location for inspection/comparison.
 				// For fun, sprinkle in its modelindex-turned-model so that it
@@ -550,7 +555,7 @@ function DebugRedraw()
 				
 				if ( strTargetname.find( g_UpdateName ) == null)
 				{
-					vecBoxColor = Vector( 134, 60, 218 );		// PURPLE
+					vecBoxColor = COLOR_LADDER_PURPLE;		// PURPLE
 				}
 				
 				// See SetFilter function for values.
@@ -569,7 +574,7 @@ function DebugRedraw()
 					case 2:
 						if ( vecOrigin.tostring() == Vector( 0, 0, 0 ).tostring() )	// Draws built in ladders.
 						{
-							vecBoxColor = Vector( 255, 128, 64 );	// LIGHT ORANGE
+							vecBoxColor = COLOR_LADDER_ORANGE;	// LIGHT ORANGE
 						}
 						break;
 				}
