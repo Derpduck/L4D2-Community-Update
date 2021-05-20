@@ -84,6 +84,7 @@
 **	- ShowUpdate() now skips over all entity types that won't be highlighted
 **	- Number of entities indexed is printed to console
 **	- Changed some if statements to switch case for optimization
+**	- Defines entity highlight colors at initialization instead of calling them within draw loop
 */
 
 // Call to cease and desist DebugRedraw(). Technically fires "StopGlowing" to all blockers,
