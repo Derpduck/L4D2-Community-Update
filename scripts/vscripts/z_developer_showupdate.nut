@@ -332,6 +332,7 @@ function DebugRedraw()
 		{
 			g_arrayFixHandles.remove( index );	// Entity is not valid, remove from array and skip.
 			printl( "Invalid entity '" + index + "' removed from drawing index." );
+			break;
 		}
 		
 		// Store entity handles and values.
