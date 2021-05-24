@@ -621,7 +621,6 @@ function DebugRedraw()
 				}
 				
 				EntFire( strTargetname, "StartGlowing" );
-				NetProps.SetPropInt( hndFixHandle, "m_CollisionGroup", 8 );
 
 				// Draw text to identify entity.
 				
