@@ -53,7 +53,6 @@
 **		-> Highlight/glow additional entities in some way - Might be possible to fire a glow input on them
 **			-> func_clip_vphysics
 **			-> func_playerinfected_clip, func_playerghostinfected_clip
-**		-> Fix/confirm redraws being generated infinitely on custom maps
 **		-> Optimize fire time for DebugRedraw()
 **	- Various minor optimizations
 **		-> Reduced repeated function calls
