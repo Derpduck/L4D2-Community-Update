@@ -45,19 +45,19 @@
 /* New changes/additions:
 **	- TODO:
 **		-> Update above comment block with any changes, update tutorial messages
-**		-> Prevent all/other from highlighting props that are part of the map/add more options to SetFilter() for props
+**		-> Add more filter options for props
 **		-> Optional range cut off for rendering debug draw boxes and text
 **		-> Check if prop is glowing/not glowing in prop redraw loop to prevent unneccessary EntFire calls
-**		-> Ensure any cases where glows or highlights persist when they shouldn't are fixed, e.g. team switch, round/map change
-**		-> Option to show model number for all ladders, cloned and non-cloned
 **		-> Highlight/glow additional entities in some way - Might be possible to fire a glow input on them
 **			-> func_clip_vphysics
 **			-> func_playerinfected_clip, func_playerghostinfected_clip
 **		-> Optimize fire time for DebugRedraw()
-**	- Various minor optimizations
+**	- DONE:
+**	- Various performance improvements
 **		-> Reduced repeated function calls
 **		-> Optimized order of execution and removed some statements from loops that only needed to be called or checked once
 **		-> g_arrayFixHandles is now dynamically resized and cleared when not in use, which also fixes script from failing if >200 entities are indexed
+**		-> Used switch cases in place of many if else statements
 **	- Fixed some issues with glows not being removed from props consistently
 ** 	- Added optional arguments for ShowUpdate() to change which entities are highlighted, text arguments must be enclosed in "quotes", invalid or blank argument will call ShowUpdate()
 **		-> ShowUpdate()			- Only highlights entities prefixed with "anv_mapfixes" and commentary blockers, unchanged
@@ -103,10 +103,18 @@ function HideUpdate()
 	
 	if ( g_TutorialShown )
 	{
+		
 		for ( local index = 0;
 			  g_arrayFixHandles[index] != null && index <= g_arrayFixHandles.len();
 			  index++ )
 		{
+			if ( ! g_arrayFixHandles[index].IsValid() )
+			{
+				g_arrayFixHandles.remove( index );	// Entity is not valid, remove from array and skip.
+				printl( "Invalid entity '" + index + "' removed from drawing index." );
+				break;
+			}
+			
 			EntFire( g_arrayFixHandles[index].GetName(), "StopGlowing" );
 		}
 	
@@ -353,6 +361,16 @@ function DebugRedraw()
 			case "env_player_blocker":
 				
 				local intBlockType = NetProps.GetPropInt( hndFixHandle, "m_nBlockType" );
+				local blockerIsAngled = false;
+				
+				// Post-fix " (ANGLED)" to all blockers that have non-"0 0 0" rotation. This is
+				// warned in ShowUpdate()'s tutorial. Engine forces rotated clips to block Physics!
+				// NetProp "m_angRotation" used instead of GetAngles() because it returns a Vector.
+				if ( NetProps.GetPropVector( hndFixHandle, "m_angRotation" ).tostring() != Vector( 0, 0, 0 ).tostring() )
+				{
+					blockerIsAngled = true;
+					strTargetname = strTargetname + " (ANGLED)";
+				}
 				
 				// See SetFilter function for values.
 				
@@ -368,6 +386,9 @@ function DebugRedraw()
 						break;
 					case 3:
 						if ( strClassname == "env_physics_blocker" ) continue;
+						break;
+					case 4:
+						if ( blockerIsAngled == false ) continue;
 						break;
 				}
 				
@@ -399,15 +420,6 @@ function DebugRedraw()
 				DebugDrawBoxAngles( vecOrigin, vecMins, vecMaxs,
 							vecAngles, vecBoxColor,
 							g_BoxOpacity, 99999999 );
-
-				// Post-fix " (ANGLED)" to all blockers that have non-"0 0 0" rotation. This is
-				// warned in ShowUpdate()'s tutorial. Engine forces rotated clips to block Physics!
-				// NetProp "m_angRotation" used instead of GetAngles() because it returns a Vector.
-
-				if ( NetProps.GetPropVector( hndFixHandle, "m_angRotation" ).tostring() != Vector( 0, 0, 0 ).tostring() )
-				{
-					strTargetname = strTargetname + " (ANGLED)";
-				}
 				
 				// Label env_player_blocker separately, we assume they are always from _commentary.txt
 				
@@ -544,14 +556,6 @@ function DebugRedraw()
 				local vecMaxs = NetProps.GetPropVector( hndFixHandle, "m_Collision.m_vecMaxs" );
 				local vecBoxColor = COLOR_LADDER_WHITE;	// WHITE
 				
-				// Draw text at the SOURCE ladder's location for inspection/comparison.
-				// For fun, sprinkle in its modelindex-turned-model so that it
-				// can at least be compared with "developer 1" Table dumps!
-				
-				local modelName = hndFixHandle.GetModelName();
-				
-				DebugRedrawCloneSource(vecMins, modelName)
-				
 				// Draw moved non-update-named ladders in purple.
 				
 				if ( strTargetname.find( g_UpdateName ) == null)
@@ -579,6 +583,14 @@ function DebugRedraw()
 						}
 						break;
 				}
+				
+				// Draw text at the SOURCE ladder's location for inspection/comparison.
+				// For fun, sprinkle in its modelindex-turned-model so that it
+				// can at least be compared with "developer 1" Table dumps!
+				
+				local modelName = hndFixHandle.GetModelName();
+				
+				DebugRedrawCloneSource(vecMins, modelName)
 
 				// By the grace of GabeN with a sparkle of luck from Kerry ladders can be rotated.
 
@@ -794,7 +806,7 @@ g_SetFilterText <- 1;
 **		- Values:	0 = Hides all entity groups, 1 = Shows all entity groups (Default)
 ** clip
 ** 		- Entities:	env_physics_blocker, env_player_blocker
-**		- Values:	0 = Hide all clips, 1 = Show all clips (Default), 2 = Only env_physics_blocker, 3 = Only env_player_blocker
+**		- Values:	0 = Hide all clips, 1 = Show all clips (Default), 2 = Only env_physics_blocker, 3 = Only env_player_blocker, 4 = Only angled blockers
 ** blocktype
 **		- Entities:	env_physics_blocker, env_player_blocker - Filters by BlockType key value
 **		- Values:	all (-1) = All block types (Default), 0 = Everyone, 1 = Survivors, 2 = Player Infected,
@@ -877,6 +889,7 @@ function SetFilter( entityGroup = null, value = null )
 			
 			// Clip Block Type is a special case and has a different default.
 			
+			/*
 			if ( value == 1 )
 			{
 				g_SetFilterBlockType <- -1;
@@ -885,6 +898,7 @@ function SetFilter( entityGroup = null, value = null )
 			{
 				g_SetFilterBlockType <- value;
 			}
+			*/
 			
 			g_SetFilterClip <- value;
 			g_SetFilterBrush <- value;
@@ -894,7 +908,7 @@ function SetFilter( entityGroup = null, value = null )
 			g_SetFilterProp <- value;
 			break;
 		case "clip":
-			if (value < 0 || value > 3)
+			if (value < 0 || value > 4)
 			{
 				value = 1;
 			}
